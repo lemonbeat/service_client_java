@@ -1,0 +1,24 @@
+plugins {
+    id 'java'
+    id 'application'
+    id 'eclipse'
+    id 'idea'
+}
+
+group 'com.lemonbeat'
+version '0.1.0'
+
+mainClassName = "com.lemonbeat.Main"
+
+sourceCompatibility = 1.8
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    compile fileTree(dir: 'libs', include: ['*.jar'])
+    testCompile group: 'junit', name: 'junit', version: '4.12'
+    compile 'com.rabbitmq:amqp-client:5.1.2'
+    compile 'org.slf4j:slf4j-simple:1.7.25'
+}

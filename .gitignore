@@ -322,3 +322,5 @@ gradle-app.setting
 
 
 # End of https://www.gitignore.io/api/java,linux,macos,gradle,windows,eclipse,netbeans,intellij,notepadpp,intellij+iml,intellij+all
+
+!/libs/*.jar

@@ -1,123 +1,88 @@
 package com.lemonbeat;
 
-import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Lsbl;
-import com.lemonbeat.lsbl.lsbl_topo_service.GwListGetRequest;
-import com.lemonbeat.lsbl.lsbl_topo_service.TopoCmd;
-import com.rabbitmq.client.*;
+import com.lemonbeat.lsbl.lsbl_value_service.DeviceValueReported;
 
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
 import java.util.Properties;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.TimeoutException;
 
 public class Main {
 
     public static Properties settings;
-    public static Connection connection;
 
-    public static void main(String[] args) {
-        loadSettings();
-        setupConnection();
+    public static String YOUR_GW_SGTIN = "";
+    public static String YOUR_DEVICE_SGTIN = "";
+    public static String YOUR_DEVICE_UUID = "";
 
-        for(int i = 0; i < 10; i++){
-            Lsbl lsbl = LsBL.create(null, "SERVICE.TOPOSERVICE", ThreadLocalRandom.current().nextInt(1, 65535));
-            Lsbl.Cmd cmd = new Lsbl.Cmd();
-            TopoCmd topoCmd = new TopoCmd();
-            GwListGetRequest gwListGetRequest = new GwListGetRequest();
-            topoCmd.setGwListGet(gwListGetRequest);
-            cmd.setTopoCmd(topoCmd);
-            lsbl.setCmd(cmd);
-            Lsbl response = callLsbl(lsbl);
-            System.out.println(LsBL.write(response));
-        }
+
+    public static void main(String[] args) throws Exception {
+
+        // Load the configuration
+        settings = new Properties();
+        settings.load(new FileInputStream("settings.properties"));
+
+        // Create an instance of the serviceClient using the settings.properties
+        ServiceClient serviceClient = new ServiceClient("settings.properties");
+
+
+        // Use the userService client to authenticate before sending calls to the backend.
+        UserServiceClient userServiceClient = new UserServiceClient(serviceClient);
+
+        // Example for a non blocking login request
+        userServiceClient.login(settings.getProperty("BACKEND_USERNAME"), settings.getProperty("BACKEND_PASSWORD"), loginResponse -> {
+            System.out.println("Login finished");
+        });
+
+        // Example for a blocking request that will return the response
+        Lsbl loginResponse = userServiceClient.loginAwait(settings.getProperty("BACKEND_USERNAME"), settings.getProperty("BACKEND_PASSWORD"));
+
+        // Example for a JWT refresh
+        Lsbl tokenRefreshResponse = userServiceClient.tokenRefreshAwait();
+
+
+        // #############################################################################################################
+        // Event example
+        // #############################################################################################################
+
+        // Subscribing to events
+        serviceClient.subscribe("EVENT.APP.VALUESERVICE.DEVICE_VALUE_REPORTED", event -> {
+            DeviceValueReported deviceValueReportedEvent = event.getEvent().getValueEvent().getDeviceValueReported();
+            System.out.println("Device SGTIN: " + deviceValueReportedEvent.getDeviceSgtin());
+            System.out.println("LsDL: "+ deviceValueReportedEvent.getLsdl());
+        }, true);
+
+
+        // #############################################################################################################
+        // Call examples: Uncomment the examples you wish to execute
+        // #############################################################################################################
+
+        // Get a list of all available gateways
+        // Examples.example_gw_list_get(serviceClient);
+
+        // Get a list of all devices known by the given gateway
+        // Examples.example_gw_device_list_get(serviceClient, YOUR_GW_SGTIN);
+
+        // Get the device_description_report of a device
+        // Examples.example_device_description_get(serviceClient, YOUR_DEVICE_SGTIN);
+
+        // Get Metadata by SGTIN
+        // Examples.example_metadata_get(serviceClient, YOUR_DEVICE_SGTIN);
+
+        // Get Metadata by UUID
+        // Examples.example_metadata_get_by_uuid(serviceClient, YOUR_DEVICE_UUID);
+
+        // Get values by SGTIN
+        // Examples.example_value_get(serviceClient, YOUR_DEVICE_SGTIN);
+
+        // Get values by UUID
+        // Examples.example_value_get_by_uuid(serviceClient, YOUR_DEVICE_UUID);
+
+        // Get the value_description_report of a device
+        // Examples.example_value_description_get(serviceClient, YOUR_DEVICE_SGTIN);
+
+        // Set values on a device
+        // Examples.example_value_set(serviceClient, YOUR_DEVICE_SGTIN);
 
     }
-
-    public static Lsbl callLsbl(Lsbl request) {
-        Lsbl result = null;
-        try {
-            Channel channel = connection.createChannel();
-            String replyQueueName = channel.queueDeclare(randomReplyQueueName(), false, true, true, null).getQueue();
-            channel.queueBind(replyQueueName, "DMZ", replyQueueName);
-            request.getAdr().setSrc(replyQueueName);
-            channel.basicPublish( "DMZ", request.getAdr().getTarget(), null, LsBL.write(request).getBytes( "UTF-8" ) );
-            final BlockingQueue<Lsbl> response = new ArrayBlockingQueue<>(1);
-            String consumerTag = channel.basicConsume(replyQueueName, true, new DefaultConsumer(channel){
-                @Override
-                public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body ){
-                    try{
-                        String lsblXML = new String( body, StandardCharsets.UTF_8.name());
-                        Lsbl responseLsbl = LsBL.parse(lsblXML);
-                        if ( responseLsbl.getAdr().getSeq() == request.getAdr().getSeq()) {
-                            response.offer( responseLsbl );
-                        }
-                    }catch (Exception e){
-                        e.printStackTrace();
-                        response.offer(new Lsbl());
-                    }
-                }
-            } );
-            result = response.take();
-            channel.basicCancel(consumerTag);
-            channel.close();
-            return result;
-        } catch (IOException e) {
-            e.printStackTrace();
-        } finally {
-            return result;
-        }
-    }
-
-    private static void setupConnection() {
-        try {
-            ConnectionFactory factory = new ConnectionFactory();
-            factory.setHost(settings.getProperty("BROKER_HOST", "localhost"));
-            factory.setUsername(settings.getProperty("BROKER_USERNAME", "guest"));
-            factory.setPassword(settings.getProperty("BROKER_PASSWORD", "guest"));
-            factory.setPort(Integer.parseInt(settings.getProperty("BROKER_PORT", "5674")));
-            factory.useSslProtocol("TLSv1.2");
-            connection = factory.newConnection();
-        } catch (IOException e) {
-            e.printStackTrace();
-        } catch (TimeoutException e) {
-            e.printStackTrace();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (KeyManagementException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private static void loadCertificates() {
-        // TODO: https://www.rabbitmq.com/ssl.html
-    }
-
-    private static String randomReplyQueueName() {
-        int replyQueueNum = ThreadLocalRandom.current().nextInt(1000000, 9999999);
-        return "SERVICE.JAVACLIENT."+System.currentTimeMillis()+replyQueueNum;
-    }
-
-    private static void loadSettings() {
-        try {
-            settings = new Properties();
-            settings.load(new FileInputStream("settings.properties"));
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            System.exit(1);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.exit(1);
-        }
-    }
-
-
 
 }

@@ -1,12 +1,16 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Lsbl;
+import com.lemonbeat.lsbl.lsbl_metadata_service.MetadataAttribute;
 import com.lemonbeat.lsbl.lsbl_metadata_service.MetadataCmd;
 import com.lemonbeat.lsbl.lsbl_metadata_service.MetadataGetRequest;
+import com.lemonbeat.lsbl.lsbl_metadata_service.MetadataSetRequest;
+
+import java.util.List;
 
 /**
- * This class implements getting metadata for devices/gateways by SGTIN and UUID.
+ * ServiceClient for getting metadata for devices/gateways by SGTIN and UUID.
  */
 public class MetadataServiceClient {
 
@@ -16,6 +20,17 @@ public class MetadataServiceClient {
 
     public MetadataServiceClient(ServiceClient serviceClient){
         this.serviceClient = serviceClient;
+    }
+
+    /**
+     * Set the metadata for the given SGTIN.
+     * @param sgtin SGTIN of the device/gateway
+     * @param attributes List of MetadataAttributes that will be set.
+     * @param callback Callback that will receive the response.
+     */
+    public void setMetadataBySgtin(String sgtin, List<MetadataAttribute> attributes, ServiceClient.ResponseCallback callback) {
+        Lsbl cmd = createSetMetadataRequest(sgtin, null, attributes);
+        serviceClient.call(cmd, callback);
     }
 
     /**
@@ -58,7 +73,19 @@ public class MetadataServiceClient {
         return serviceClient.callAwait(cmd);
     }
 
-    private Lsbl createGetMetadataBySgtinRequest(String sgtin){
+    private Lsbl createSetMetadataRequest(String sgtin, String uuid, List<MetadataAttribute> attributes) {
+        Lsbl.Cmd cmd = new Lsbl.Cmd();
+        MetadataCmd metadataCmd = new MetadataCmd();
+        MetadataSetRequest metadataSetRequest = new MetadataSetRequest();
+        metadataSetRequest.setSgtin(sgtin);
+        metadataSetRequest.setUuid(uuid);
+        metadataSetRequest.getAttribute().addAll(attributes);
+        metadataCmd.setMetadataSet(metadataSetRequest);
+        cmd.setMetadataCmd(metadataCmd);
+        return LsBL.createCmd(cmd, SERVICE_QUEUE, serviceClient.getToken());
+    }
+
+    private Lsbl createGetMetadataBySgtinRequest(String sgtin) {
         Lsbl.Cmd cmd = new Lsbl.Cmd();
         MetadataCmd metadataCmd = new MetadataCmd();
         MetadataGetRequest metadataGetRequest = new MetadataGetRequest();
@@ -68,7 +95,7 @@ public class MetadataServiceClient {
         return LsBL.createCmd(cmd, SERVICE_QUEUE, serviceClient.getToken());
     }
 
-    private Lsbl createGetMetadataByUuidRequest(String uuid){
+    private Lsbl createGetMetadataByUuidRequest(String uuid) {
         Lsbl.Cmd cmd = new Lsbl.Cmd();
         MetadataCmd metadataCmd = new MetadataCmd();
         MetadataGetRequest metadataGetRequest = new MetadataGetRequest();

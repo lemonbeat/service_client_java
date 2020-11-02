@@ -1,4 +1,4 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsdl.LsDL;
 import com.lemonbeat.lsdl.value.ValueReportType;

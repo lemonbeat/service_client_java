@@ -1,4 +1,4 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Lsbl;
@@ -8,7 +8,7 @@ import com.lemonbeat.lsbl.lsbl_topo_service.GwListGetRequest;
 import com.lemonbeat.lsbl.lsbl_topo_service.TopoCmd;
 
 /**
- * This class implements getting information about devices and gateways.
+ * ServiceClient for getting information about devices and gateways.
  */
 public class TopoServiceClient {
 

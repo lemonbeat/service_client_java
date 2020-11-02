@@ -1,11 +1,13 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Lsbl;
 import com.lemonbeat.lsbl.lsbl_user_service.*;
 
+import java.util.Properties;
+
 /**
- * This class implements the login and token refresh.
+ * ServiceClient for login and token refresh.
  * When the requests are successful the token will be stored in the service client instance.
  */
 public class UserServiceClient {
@@ -55,6 +57,16 @@ public class UserServiceClient {
         return response;
     }
 
+    /**
+     * Login with BACKEND_USERNAME and BACKEND_PASSWORD from the settings.properties file.
+     * @return Lsbl with the result of the login request.
+     */
+    public Lsbl loginAwait() {
+        Properties settings = this.serviceClient.getSettings();
+        String username = settings.getProperty("BACKEND_USERNAME", "");
+        String password = settings.getProperty("BACKEND_PASSWORD", "");
+        return loginAwait(username, password);
+    }
 
     /**
      * The JWT expires, this method does a refresh and stores the new token in the serviceClient instance.
@@ -98,7 +110,6 @@ public class UserServiceClient {
         return LsBL.createCmd(cmd, SERVICE_QUEUE, serviceClient.getToken());
     }
 
-
     private Lsbl createLoginRequest(String username, String password) {
         Lsbl.Cmd cmd = new Lsbl.Cmd();
         UserCmd userCmd = new UserCmd();
@@ -109,6 +120,5 @@ public class UserServiceClient {
         cmd.setUserCmd(userCmd);
         return LsBL.createCmd(cmd, SERVICE_QUEUE, serviceClient.getToken());
     }
-
 
 }

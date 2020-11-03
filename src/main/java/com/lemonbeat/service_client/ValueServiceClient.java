@@ -1,4 +1,4 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Lsbl;
@@ -12,7 +12,7 @@ import com.lemonbeat.lsdl.value.ValueSetType;
 import java.util.List;
 
 /**
- * This class implements getting and setting values.
+ * ServiceClient for getting and setting values on devices.
  */
 public class ValueServiceClient {
 

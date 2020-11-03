@@ -1,4 +1,4 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Hdr;
@@ -22,23 +22,21 @@ import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
- * This class provides the general communication with the backend.
+ * Provides the general communication with the backend.
  * It offers various callbacks for event and RPC mechanisms.
- *
- * @author Lemonbeat GmbH
- * @version 4.0.0
  */
 public class ServiceClient {
 
     private Connection connection;
     private String token;
     private long tokenExpires;
+    private Properties settings;
 
-    private static String REPLY_QUEUE_PREFIX = "PARTNER.CLIENT.";
-    private static String EVENTS_QUEUE_PREFIX = "PARTNER.EVENTS.";
-    private static String DMZ_EXCHANGE = "DMZ";
-    private static String RPC_EXCHANGE = "PARTNER";
-    private static String EVENT_EXCHANGE = "EVENT.APP";
+    private static final String REPLY_QUEUE_PREFIX = "PARTNER.CLIENT.";
+    private static final String EVENTS_QUEUE_PREFIX = "PARTNER.EVENTS.";
+    private static final String DMZ_EXCHANGE = "DMZ";
+    private static final String RPC_EXCHANGE = "PARTNER";
+    private static final String EVENT_EXCHANGE = "EVENT.APP";
     private static String CLIENT_NAME = "CLIENT";
 
     /**
@@ -47,15 +45,26 @@ public class ServiceClient {
      */
     public ServiceClient(Connection connection){
         this.connection = connection;
+        this.settings = new Properties();
     }
 
     /**
      * Create a new instance by passing the path to .properties file with the settings.
-     * @param propertiesFile
+     * @param propertiesFile Path to the settings.properties file
      */
     public ServiceClient(String propertiesFile){
+        this(propertiesFile, null);
+    }
+
+    /**
+     * Create a new instance by passing the path to .properties file with the settings.
+     * Optionally you can add a MetricsCollector (See: https://www.rabbitmq.com/api-guide.html#metrics)
+     * @param propertiesFile Path to the settings.properties file
+     * @param metricsCollector Instance of MetricsCollector
+     */
+    public ServiceClient(String propertiesFile, MetricsCollector metricsCollector){
         try {
-            Properties settings = new Properties();
+            this.settings = new Properties();
             settings.load(new FileInputStream(propertiesFile));
 
             int broker_port = Integer.parseInt(settings.getProperty("BROKER_PORT", "5671"));
@@ -67,7 +76,7 @@ public class ServiceClient {
             String truststore_pass = settings.getProperty("TRUSTSTORE_PASSWORD", "password");
             String client_p12_path = settings.getProperty("CLIENT_P12_PATH", "client.p12");
             String client_p12_pass = settings.getProperty("CLIENT_P12_PASSWORD", "password");
-            ServiceClient.CLIENT_NAME = settings.getProperty("CLIENT_NAME", "client.p12");
+            ServiceClient.CLIENT_NAME = settings.getProperty("CLIENT_NAME", "EXAMPLE");
 
             KeyStore ks = KeyStore.getInstance("PKCS12");
             ks.load(new FileInputStream(client_p12_path), client_p12_pass.toCharArray());
@@ -85,6 +94,9 @@ public class ServiceClient {
             c.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 
             ConnectionFactory factory = new ConnectionFactory();
+            if(metricsCollector != null){
+                factory.setMetricsCollector(metricsCollector);
+            }
             factory.setHost(broker_host);
             factory.setVirtualHost(broker_vhost);
             factory.setUsername(broker_username);
@@ -94,8 +106,7 @@ public class ServiceClient {
             connection = factory.newConnection();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            System.exit(1);
+            throw new RuntimeException(e);
         }
     }
 
@@ -103,6 +114,7 @@ public class ServiceClient {
      * Use this to subscribe your callback to certain events. The queue is deleted when the consumer disconnects.
      * @param eventName Name of the event, e.g. EVENT.APP.TOPOSERVICE.DEVICE_INCLUDED
      * @param callback EventCallback with an onEvent method
+     * @return Returns the AMQP consumer tag
      */
     public String subscribe(String eventName, EventCallback callback) {
         return subscribe(eventName, callback, false);
@@ -114,6 +126,7 @@ public class ServiceClient {
      * @param callback EventCallback with an onEvent method
      * @param durable Creates a queue that will be persistet if durable is set to true.
      *                Allows events to be stored on the broker even if the consumer is not connected.
+     * @return AMQP consumer tag
      */
     public String subscribe(String eventName, EventCallback callback, boolean durable){
         try {
@@ -147,8 +160,10 @@ public class ServiceClient {
                         e.printStackTrace();
                     } finally {
                         callback.onEvent(event);
-                        this.currentChannel.basicAck(envelope.getDeliveryTag(), true);
                     }
+                    try {
+                        this.currentChannel.basicAck(envelope.getDeliveryTag(), true);
+                    }catch (AlreadyClosedException alreadyClosedException){}
                 }
 
                 @Override
@@ -213,7 +228,9 @@ public class ServiceClient {
                         e.printStackTrace();
                     } finally {
                         responseReceived.set(true);
-                        callback.onResponse(response);
+                        if(callback != null){
+                            callback.onResponse(response);
+                        }
                     }
                 }
             });
@@ -221,16 +238,18 @@ public class ServiceClient {
             Thread waitForResponse = new Thread(() -> {
                 int timeout = 120000;
                 try {
-                    while(!responseReceived.get() && timeout > 0) {
+                    while (!responseReceived.get() && timeout > 0) {
                         Thread.sleep(500);
                         timeout = timeout - 500;
                     }
-                    if(timeout <= 0 && !responseReceived.get()){
-                        callback.onResponse(createTimeout(request));
+                    if (timeout <= 0 && !responseReceived.get()) {
+                        callback.onResponse(createTimeoutMessage(request));
                     } else {
                     }
                     channel.basicCancel(consumerTag);
                     channel.close();
+                } catch (AlreadyClosedException e) {
+
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 } catch (TimeoutException e) {
@@ -253,22 +272,17 @@ public class ServiceClient {
      * @return Lsbl response for the given request.
      */
     public Lsbl callAwait(Lsbl request) {
-        AtomicBoolean responseReceived = new AtomicBoolean(false);
-        final Lsbl[] response = new Lsbl[1];
-
-        this.call(request, receivedRespone -> {
-            responseReceived.set(true);
-            response[0] = receivedRespone;
+        Lsbl lsblResponse = createTimeoutMessage(request);
+        CompletableFuture<Lsbl> response = new CompletableFuture<>();
+        this.call(request, lsbl -> {
+            response.complete(lsbl);
         });
-
-        while(!responseReceived.get()){
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+        try{
+            lsblResponse = response.get(120, TimeUnit.SECONDS);
+        } catch (Exception ex) {}
+        finally {
+            return lsblResponse;
         }
-        return response[0];
     }
 
     /**
@@ -278,7 +292,6 @@ public class ServiceClient {
     public String getToken() {
         return token;
     }
-
 
     /**
      * Sets the JWT that will be used for all subsequent messages
@@ -305,6 +318,14 @@ public class ServiceClient {
     }
 
     /**
+     * Returns the current settings, if the ServiceClient was instantiated with a properties file.
+     * @return Properties Current settings
+     */
+    public Properties getSettings() {
+        return this.settings;
+    }
+
+    /**
      * Sets the UTC Unix timestamp of the token expiry
      * @param tokenExpires UTC Unix Timestamp
      */
@@ -312,7 +333,12 @@ public class ServiceClient {
         this.tokenExpires = tokenExpires;
     }
 
-    private Lsbl createTimeout(Lsbl request) {
+    /**
+     * Creates a timeout LsBL Nack from the given request.
+     * @param request Request that timed out
+     * @return LsBL Nack message
+     */
+    public Lsbl createTimeoutMessage(Lsbl request) {
         Lsbl lsbl = new Lsbl();
         Lsbl.Adr adr = new Lsbl.Adr();
         adr.setSeq(request.getAdr().getSeq());
@@ -332,6 +358,12 @@ public class ServiceClient {
         return lsbl;
     }
 
+    /**
+     * Generate a queue name depending on the event name and the durable option.
+     * @param eventName Name of the event the queue is subscribed to
+     * @param durable If the queue is not durable the queue name will contain a random number.
+     * @return Name of the event queue
+     */
     private String eventQueueName(String eventName, boolean durable) {
         String suffix = eventName.replace("EVENT.APP", "");
         if(durable){
@@ -343,6 +375,10 @@ public class ServiceClient {
         }
     }
 
+    /**
+     * Generate a random queue name for the call and callAwait method invocations.
+     * @return Random name for the reply queue
+     */
     private String randomReplyQueueName() {
         int replyQueueNum = ThreadLocalRandom.current().nextInt(1000000, 9999999);
         return ServiceClient.REPLY_QUEUE_PREFIX + ServiceClient.CLIENT_NAME.toUpperCase() + "." + System.currentTimeMillis()+replyQueueNum;
@@ -362,10 +398,16 @@ public class ServiceClient {
         return s;
     }
 
+    /**
+     * Callback that will receive an event for further processing by your application.
+     */
     public interface EventCallback {
         void onEvent(Lsbl event);
     }
 
+    /**
+     * Callback that will receive the response for calls to services that expect an answer.
+     */
     public interface ResponseCallback {
         void onResponse(Lsbl response);
     }

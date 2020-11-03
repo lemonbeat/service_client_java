@@ -1,4 +1,4 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.lsbl.Lsbl;
 import com.lemonbeat.lsbl.lsbl_value_service.DeviceValueReported;
@@ -6,8 +6,14 @@ import com.lemonbeat.lsbl.lsbl_value_service.DeviceValueReported;
 import java.io.FileInputStream;
 import java.util.Properties;
 
+/**
+ * Starting point of our example application.
+ */
 public class Main {
 
+    /**
+     * Content of the settings.properties file if the ServiceClient was instanced with a properties file.
+     */
     public static Properties settings;
 
     public static String YOUR_GW_SGTIN = "";
@@ -48,7 +54,11 @@ public class Main {
         serviceClient.subscribe("EVENT.APP.VALUESERVICE.DEVICE_VALUE_REPORTED", event -> {
             DeviceValueReported deviceValueReportedEvent = event.getEvent().getValueEvent().getDeviceValueReported();
             System.out.println("Device SGTIN: " + deviceValueReportedEvent.getDeviceSgtin());
-            System.out.println("LsDL: "+ deviceValueReportedEvent.getLsdl());
+            // System.out.println("LsDL: "+ deviceValueReportedEvent.getLsdl());
+        }, true);
+
+        serviceClient.subscribe("EVENT.APP.#", event -> {
+            System.out.println(event.getEvent().getName());
         }, true);
 
 

@@ -1,4 +1,4 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Lsbl;
@@ -16,6 +16,9 @@ import javax.xml.bind.JAXBException;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * Various examples for common commands.
+ */
 public class Examples {
 
 

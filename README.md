@@ -1,13 +1,31 @@
-# Service Client
+# Service Client Java
 
 This project is an example on how to connect to the Lemonbeat Operations Platform using a Java based client.
 
+It should help with the integration of your project into the [Lemonbeat End2End Device to Cloud IoT solution](https://www.lemonbeat.com/). 
+
+The project uses [Gradle](https://gradle.org/) as its build tool, to see a list of all available task you can run:
+
+```bash
+./gradlew tasks
+```
+
+You can generate the Java documentation by running:
+
+```bash
+./gradlew javadoc
+```
+
 ## Getting started
 
-The broker uses amqp which uses an encrypted connection. To connect with the java client you'll need a jks file and p12 file.
+The broker uses AMQP which uses an encrypted connection. 
+To connect with the java client you'll need a jks file and p12 file.
+
 Both the p12 and jks require a enrollment/passcode, these will be different for each file.
 
-Update the settings.properties with the path to these files and their enrollment/passcode .
+Update the settings.properties with the path to these files and their enrollment/passcode.
+
+The information for your `settings.properties` and the certificates will be provided by your Lemonbeat contact person.
 
 You can create a new instance of the service client by passing the path to the settings.properties.
 
@@ -72,3 +90,27 @@ serviceClient.subscribe("EVENT.APP.VALUESERVICE.DEVICE_VALUE_REPORTED", event ->
     System.out.printf(LsBL.write(event));
 }, true);
 ```
+
+## Connection management and monitoring
+
+The official RabbitMQ Java library recovers connections and channels when a connection to the broker is lost.
+To listen to such events as reconnections one could implement a listener to receive the close of the connection.
+
+```java
+serviceClient.getConnection().addShutdownListener(cause -> {
+    // Act on the connection shutdown
+});
+```
+
+Depending on your application it might be helpful to monitor the rabbit metrics using a MetricsCollector.
+
+An example implementation can be found in `test/java/com/lemonbeat/ExampleMetricsCollector`.
+
+The metrics collector can be referenced in the Service Client constructor.
+
+```java
+ExampleMetricsCollector metricsCollector = new ExampleMetricsCollector();
+ServiceClient serviceClient = new ServiceClient("settings.properties", metricsCollector);
+```
+
+Further information about the different metric collectors can be found [here](https://www.rabbitmq.com/api-guide.html#metrics).

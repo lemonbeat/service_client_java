@@ -1,4 +1,4 @@
-package com.lemonbeat;
+package com.lemonbeat.service_client;
 
 import com.lemonbeat.lsbl.LsBL;
 import com.lemonbeat.lsbl.lsbl.Lsbl;

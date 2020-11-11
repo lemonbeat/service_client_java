@@ -34,6 +34,17 @@ public class MetadataServiceClient {
     }
 
     /**
+     * Set the metadata for the given SGTIN.
+     * @param sgtin SGTIN of the device/gateway
+     * @param attributes List of MetadataAttributes that will be set.
+     * @return Response LsBL
+     */
+    public Lsbl setMetadataBySgtinAwait(String sgtin, List<MetadataAttribute> attributes) {
+        Lsbl cmd = createSetMetadataRequest(sgtin, null, attributes);
+        return serviceClient.callAwait(cmd);
+    }
+
+    /**
      * Get the metadata for the given device/gateway by SGTIN.
      * @param sgtin SGTIN of the device/gateway
      * @param callback Callback that will receive the response.

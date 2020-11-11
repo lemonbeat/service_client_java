@@ -121,6 +121,7 @@ The tests require a RabbitMQ broker for the connection. You can start a RabbitMQ
 
 ```bash
 ./start-rabbitmq.sh
+./gradlew test
 ```
 
 This will use docker to pull RabbitMQ 3.8.9 and create the required exchanges automatically.

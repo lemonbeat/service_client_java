@@ -120,11 +120,12 @@ Further information about the different metric collectors can be found [here](ht
 The tests require a RabbitMQ broker for the connection. You can start a RabbitMQ with this command:
 
 ```bash
-./start-rabbitmq.sh
+./init-rabbitmq.sh
 ./gradlew test
 ```
 
-This will use docker to pull RabbitMQ 3.8.9 and create the required exchanges automatically.
+This will use docker to pull RabbitMQ 3.8.9 start it and create the required exchanges automatically. 
+Later on, you can start the RabbitMQ container with `docker start rabbit` 
 
 The default `settings.properties` is already set up to connect to this instance.
 You can open the Management UI at http://localhost:15672 the default username is `user` with the password `password`.

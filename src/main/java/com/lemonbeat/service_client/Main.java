@@ -32,38 +32,38 @@ public class Main {
 
 
         // Use the userService client to authenticate before sending calls to the backend.
-        UserServiceClient userServiceClient = new UserServiceClient(serviceClient);
+        // UserServiceClient userServiceClient = new UserServiceClient(serviceClient);
 
         // Example for a non blocking login request
+        /*
         userServiceClient.login(settings.getProperty("BACKEND_USERNAME"), settings.getProperty("BACKEND_PASSWORD"), loginResponse -> {
             System.out.println("Login finished");
         });
+        */
 
         // Example for a blocking request that will return the response
-        Lsbl loginResponse = userServiceClient.loginAwait(settings.getProperty("BACKEND_USERNAME"), settings.getProperty("BACKEND_PASSWORD"));
+        // Lsbl loginResponse = userServiceClient.loginAwait(settings.getProperty("BACKEND_USERNAME"), settings.getProperty("BACKEND_PASSWORD"));
 
         // Example for a JWT refresh
-        Lsbl tokenRefreshResponse = userServiceClient.tokenRefreshAwait();
+        // Lsbl tokenRefreshResponse = userServiceClient.tokenRefreshAwait();
 
 
         // #############################################################################################################
         // Event example
+        // Consuming events can be done without any JWT, so no login is required.
         // #############################################################################################################
 
         // Subscribing to events
         serviceClient.subscribe("EVENT.APP.VALUESERVICE.DEVICE_VALUE_REPORTED", event -> {
             DeviceValueReported deviceValueReportedEvent = event.getEvent().getValueEvent().getDeviceValueReported();
             System.out.println("Device SGTIN: " + deviceValueReportedEvent.getDeviceSgtin());
-            // System.out.println("LsDL: "+ deviceValueReportedEvent.getLsdl());
-        }, true);
-
-        serviceClient.subscribe("EVENT.APP.#", event -> {
-            System.out.println(event.getEvent().getName());
+            System.out.println("LsDL: "+ deviceValueReportedEvent.getLsdl());
         }, true);
 
 
         // #############################################################################################################
         // Call examples: Uncomment the examples you wish to execute
+        // Sending commands requires a login, please make sure you obtain a JWT before running this commands.
         // #############################################################################################################
 
         // Get a list of all available gateways

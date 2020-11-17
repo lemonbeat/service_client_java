@@ -91,7 +91,7 @@ serviceClient.subscribe("EVENT.APP.VALUESERVICE.DEVICE_VALUE_REPORTED", event ->
 }, true);
 ```
 
-## Connection management and monitoring
+## Connection management and monitoring**
 
 The official RabbitMQ Java library recovers connections and channels when a connection to the broker is lost.
 To listen to such events as reconnections one could implement a listener to receive the close of the connection.
@@ -114,3 +114,18 @@ ServiceClient serviceClient = new ServiceClient("settings.properties", metricsCo
 ```
 
 Further information about the different metric collectors can be found [here](https://www.rabbitmq.com/api-guide.html#metrics).
+
+## Running the tests
+
+The tests require a RabbitMQ broker for the connection. You can start a RabbitMQ with this command:
+
+```bash
+./init-rabbitmq.sh
+./gradlew test
+```
+
+This will use docker to pull RabbitMQ 3.8.9 start it and create the required exchanges automatically. 
+Later on, you can start the RabbitMQ container with `docker start rabbit` 
+
+The default `settings.properties` is already set up to connect to this instance.
+You can open the Management UI at http://localhost:15672 the default username is `user` with the password `password`.

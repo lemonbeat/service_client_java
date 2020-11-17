@@ -72,26 +72,30 @@ public class ServiceClient {
             String broker_vhost = settings.getProperty("BROKER_VHOST", "/");
             String broker_username = settings.getProperty("BROKER_USERNAME", "guest");
             String broker_password = settings.getProperty("BROKER_PASSWORD", "guest");
+            String broker_ssl = settings.getProperty("BROKER_SSL", "true");
             String truststore_path = settings.getProperty("TRUSTSTORE_PATH", "keystore.jks");
             String truststore_pass = settings.getProperty("TRUSTSTORE_PASSWORD", "password");
             String client_p12_path = settings.getProperty("CLIENT_P12_PATH", "client.p12");
             String client_p12_pass = settings.getProperty("CLIENT_P12_PASSWORD", "password");
             ServiceClient.CLIENT_NAME = settings.getProperty("CLIENT_NAME", "EXAMPLE");
 
-            KeyStore ks = KeyStore.getInstance("PKCS12");
-            ks.load(new FileInputStream(client_p12_path), client_p12_pass.toCharArray());
+            SSLContext sslContext = null;
+            if(Boolean.parseBoolean(broker_ssl)){
+                KeyStore ks = KeyStore.getInstance("PKCS12");
+                ks.load(new FileInputStream(client_p12_path), client_p12_pass.toCharArray());
 
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(ks, client_p12_pass.toCharArray());
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+                kmf.init(ks, client_p12_pass.toCharArray());
 
-            KeyStore tks = KeyStore.getInstance("JKS");
-            tks.load(new FileInputStream(truststore_path), truststore_pass.toCharArray());
+                KeyStore tks = KeyStore.getInstance("JKS");
+                tks.load(new FileInputStream(truststore_path), truststore_pass.toCharArray());
 
-            TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
-            tmf.init(tks);
+                TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
+                tmf.init(tks);
 
-            SSLContext c = SSLContext.getInstance("TLSv1.2");
-            c.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+                sslContext = SSLContext.getInstance("TLSv1.2");
+                sslContext.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
+            }
 
             ConnectionFactory factory = new ConnectionFactory();
             if(metricsCollector != null){
@@ -102,7 +106,9 @@ public class ServiceClient {
             factory.setUsername(broker_username);
             factory.setPassword(broker_password);
             factory.setPort(broker_port);
-            factory.useSslProtocol(c);
+            if(sslContext != null){
+                factory.useSslProtocol(sslContext);
+            }
             connection = factory.newConnection();
 
         } catch (Exception e) {

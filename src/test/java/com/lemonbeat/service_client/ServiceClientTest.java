@@ -54,7 +54,7 @@ public class ServiceClientTest {
     @Test
     public void constructorWithValidPropertiesFile() {
         serviceClient = new ServiceClient("settings.properties");
-        assert serviceClient.getSettings().keySet().size() == 13;
+        assert serviceClient.getSettings().keySet().size() == 11;
         assert serviceClient.getConnection().isOpen();
     }
 
@@ -167,11 +167,9 @@ public class ServiceClientTest {
                 "BROKER_SSL",
                 "BACKEND_USERNAME",
                 "BACKEND_PASSWORD",
-                "TRUSTSTORE_PATH",
-                "TRUSTSTORE_PASSWORD",
                 "CLIENT_NAME",
-                "CLIENT_P12_PATH",
-                "CLIENT_P12_PASSWORD"
+                "CLIENT_JKS_PATH",
+                "CLIENT_JKS_PASSWORD"
         );
         assert serviceClient.getSettings().keySet().containsAll(expectedSettings);
     }

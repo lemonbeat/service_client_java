@@ -18,14 +18,9 @@ You can generate the Java documentation by running:
 
 ## Getting started
 
-The broker uses AMQP which uses an encrypted connection. 
-To connect with the java client you'll need a jks file and p12 file.
+The broker uses AMQP which uses an encrypted connection. To connect with the java client you'll need a jks file.
 
-Both the p12 and jks require a enrollment/passcode, these will be different for each file.
-
-Update the settings.properties with the path to these files and their enrollment/passcode.
-
-The information for your `settings.properties` and the certificates will be provided by your Lemonbeat contact person.
+The information for your `settings.properties` and the jks will be provided by your Lemonbeat contact person.
 
 You can create a new instance of the service client by passing the path to the settings.properties.
 

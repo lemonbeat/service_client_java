@@ -16,6 +16,9 @@ You can generate the Java documentation by running:
 ./gradlew javadoc
 ```
 
+## Acquiring a client certificate
+you can use `create-signing-request.sh` to generate the CSR file. You can send the CSR file to Lemonbeat in order to obtain your client certificate.
+
 ## Getting started
 
 The broker uses AMQP which uses an encrypted connection. To connect with the java client you'll need a jks file.

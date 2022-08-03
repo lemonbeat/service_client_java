@@ -4,6 +4,17 @@ This project is an example on how to connect to the Lemonbeat Operations Platfor
 
 It should help with the integration of your project into the [Lemonbeat End2End Device to Cloud IoT solution](https://www.lemonbeat.com/). 
 
+## Use Docker to build the java artifects
+
+```bash
+make build
+
+## Run docker environment
+
+```bash
+make docker
+
+
 The project uses [Gradle](https://gradle.org/) as its build tool, to see a list of all available task you can run:
 
 ```bash

@@ -22,20 +22,22 @@ HELP_FUN = \
 .DEFAULT_GOAL := help
 ROOT_DIR=$(realpath $(shell pwd))
 
+.PHONY: build
 build: ## Build a release within docker
 	docker run --rm \
 	-v $(ROOT_DIR):/opt/service_client \
 	-w /opt/service_client \
-	openjdk:8-jdk-buster \
+	openjdk:11-jdk-buster \
 	/bin/bash -c "\
 	./gradlew build && \
 	./gradlew test && \
 	chown $(shell id -u):$(shell id -g) /opt/service_client/* -R"
 
+.PHONY: docker
 docker:
 	docker run --rm \
 	--net=host \
 	-v $(ROOT_DIR):/opt/service_client \
 	-w /opt/service_client -it \
-	openjdk:8-jdk-buster \
+	openjdk:11-jdk-buster \
 	/bin/bash 

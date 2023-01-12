@@ -63,10 +63,41 @@ pipeline {
 
         }
 
-        stage('build and test'){
+        stage('build and test - java 8'){
+                agent {
+                    docker {
+                        image 'openjdk:8-jdk-buster'
+                        label 'swdev-docker'
+                        reuseNode true
+                        args '\
+                        -u 0:0 \
+                        --network service-client-net-${BUILD_ID} \
+                        -v /var/run/docker.sock:/var/run/docker.sock'
+                    }
+                }
+                stages {
+                    stage('build'){
+                        steps {
+                            sh '''
+                            ./gradlew build
+                            '''
+                        }
+                    }
+                    stage('test'){
+                        steps {
+                            sh '''
+                            ./gradlew test
+                            '''
+                        }
+                    }
+                }
+            }
+        }
+
+        stage('build and test - java 11'){
             agent {
                 docker {
-                    image 'openjdk:8-jdk-buster'
+                    image 'openjdk:11-jdk-buster'
                     label 'swdev-docker'
                     reuseNode true
                     args '\
@@ -92,7 +123,6 @@ pipeline {
                 }
             }
         }
-
     }
 
     post {

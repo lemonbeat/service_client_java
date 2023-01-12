@@ -100,7 +100,7 @@ serviceClient.subscribe("EVENT.APP.VALUESERVICE.DEVICE_VALUE_REPORTED", event ->
 }, true);
 ```
 
-## Connection management and monitoring**
+## Connection management and monitoring
 
 The official RabbitMQ Java library recovers connections and channels when a connection to the broker is lost.
 To listen to such events as reconnections one could implement a listener to receive the close of the connection.

@@ -6,11 +6,9 @@ plugins {
 }
 
 group 'com.lemonbeat.service_client'
-version '6.1.0'
+version '7.0.0'
 
 mainClassName = "com.lemonbeat.service_client.Main"
-
-sourceCompatibility = 1.8
 
 repositories {
     mavenCentral()
@@ -20,8 +18,11 @@ repositories {
 }
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile 'com.rabbitmq:amqp-client:5.9.0'
-    compile 'org.slf4j:slf4j-simple:1.7.25'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    testImplementation group: 'junit', name: 'junit', version: '4.12'
+    implementation 'com.rabbitmq:amqp-client:5.16.0'
+    implementation 'org.slf4j:slf4j-simple:2.0.5'
+    implementation 'com.sun.xml.bind:jaxb-core:4.0.1'
+    implementation 'javax.xml.bind:jaxb-api:2.4.0-b180830.0359'
+    implementation 'com.sun.xml.bind:jaxb-impl:4.0.1'
 }

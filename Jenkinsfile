@@ -8,16 +8,20 @@ pipeline {
         }
     }
 
+    triggers {
+        cron(env.BRANCH_NAME == 'master' ? 'H 7 * * *' : '')
+    }
+
     options {
         gitLabConnection('gitlab.lemonbeat.com')
-        buildDiscarder(logRotator(numToKeepStr: '10', artifactNumToKeepStr: '10'))
+        buildDiscarder(logRotator(numToKeepStr: '50', artifactNumToKeepStr: '10'))
     }
 
     stages {
 
         stage('clean'){
             steps {
-                updateGitlabCommitStatus name: 'service_client_java', state: 'pending'
+                updateGitlabCommitStatus name: 'service_client_java', state: 'running'
                 cleanWs()
             }
         }
@@ -25,15 +29,15 @@ pipeline {
         stage('git pull'){
             steps {
                 checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: "${BRANCH_NAME}"]],
-                    doGenerateSubmoduleConfigurations: false,
-                    extensions: [],
-                    submoduleCfg: [],
-                    userRemoteConfigs: scm.userRemoteConfigs
+                        $class: 'GitSCM',
+                        branches: [[name: "${BRANCH_NAME}"]],
+                        doGenerateSubmoduleConfigurations: false,
+                        extensions: [],
+                        submoduleCfg: [],
+                        userRemoteConfigs: scm.userRemoteConfigs
                 ])
             }
-        }
+        }  // END stage git pull
 
         stage('prepare'){
             steps {
@@ -49,7 +53,7 @@ pipeline {
                 -e RABBITMQ_DEFAULT_USER=user \
                 -e RABBITMQ_DEFAULT_PASS=password \
                 -e RABBITMQ_DEFAULT_VHOST=vhost \
-                rabbitmq:3.8.9-management
+                rabbitmq:3.13.1-management
 
                 sleep 10
 
@@ -60,44 +64,45 @@ pipeline {
                 sed -i "s/BROKER_HOST=localhost/BROKER_HOST=rabbit-${BUILD_ID}/g" settings.properties
                 '''
             }
+        } // END stage prepare
 
-        }
 
-        stage('build and test - java 8'){
-                agent {
-                    docker {
-                        image 'openjdk:8-jdk-buster'
-                        label 'swdev-docker'
-                        reuseNode true
-                        args '\
-                        -u 0:0 \
-                        --network service-client-net-${BUILD_ID} \
-                        -v /var/run/docker.sock:/var/run/docker.sock'
+        stage('Test') {
+            matrix {
+                axes {
+                    axis {
+                        name 'JAVA_VERSION'
+                        values '8', '11', '13', '17', '21'
                     }
                 }
                 stages {
-                    stage('build'){
-                        steps {
-                            sh '''
-                            ./gradlew build
-                            '''
+                    stage("build and test") {
+                        agent {
+                            docker {
+                                image "openjdk:${JAVA_VERSION}-jdk-buster"
+                                label "swdev-docker"
+                                reuseNode true
+                                args '\
+                                -u 0:0 \
+                                --network service-client-net-${BUILD_ID} \
+                                -v /var/run/docker.sock:/var/run/docker.sock'
+                            }
                         }
-                    }
-                    stage('test'){
                         steps {
-                            sh '''
+                            sh script: """#!/bin/bash
                             ./gradlew test
-                            '''
+                            """
+                            junit 'build/test-results/**/*.xml'
                         }
                     }
                 }
             }
-        }
+        } // stage('Test')
 
-        stage('build and test - java 11'){
+        stage('docs and jar'){
             agent {
                 docker {
-                    image 'openjdk:11-jdk-buster'
+                    image 'openjdk:21-jdk-buster'
                     label 'swdev-docker'
                     reuseNode true
                     args '\
@@ -107,23 +112,26 @@ pipeline {
                 }
             }
             stages {
-                stage('build'){
+                stage('javadoc'){
                     steps {
                         sh '''
-                        ./gradlew build
+                        ./gradlew javadoc
                         '''
+                        archiveArtifacts artifacts: 'build/docs/javadoc/**/*', allowEmptyArchive: 'true'
                     }
                 }
-                stage('test'){
+                stage('jar'){
                     steps {
                         sh '''
-                        ./gradlew test
+                        ./gradlew jar
                         '''
+                        archiveArtifacts artifacts: 'build/libs/*.jar', allowEmptyArchive: 'true'
                     }
                 }
             }
         }
-    }
+
+    } // END stages
 
     post {
         always {
@@ -131,27 +139,24 @@ pipeline {
             sh '''
             docker stop --time=1 rabbit-${BUILD_ID} || true
             docker rm -f rabbit-${BUILD_ID} || true
-
             docker network rm service-client-net-${BUILD_ID} || true
-
             sudo chown -R svc_jenkins:users ${PWD}
             '''
             cleanWs()
         }
         failure {
-          updateGitlabCommitStatus name: 'service_client_java', state: 'failed'
-          addGitLabMRComment comment: 'Well, that didn´t work obviously.'
+            updateGitlabCommitStatus name: 'service_client_java', state: 'failed'
+            addGitLabMRComment comment: 'Well, that didn´t work obviously.'
         }
         success {
-          updateGitlabCommitStatus name: 'service_client_java', state: 'success'
-          addGitLabMRComment comment: 'This worked, as it should have.'
+            updateGitlabCommitStatus name: 'service_client_java', state: 'success'
+            addGitLabMRComment comment: 'This worked, as it should have.'
         }
         aborted {
-          updateGitlabCommitStatus name: 'service_client_java', state: 'canceled'
-          addGitLabMRComment comment: 'The build was canceled.'
+            updateGitlabCommitStatus name: 'service_client_java', state: 'canceled'
+            addGitLabMRComment comment: 'The build was canceled.'
         }
 
-    }
+    } // END post
 
-
-}
+} // END pipeline

@@ -133,7 +133,7 @@ The tests require a RabbitMQ broker for the connection. You can start a RabbitMQ
 ./gradlew test
 ```
 
-This will use docker to pull RabbitMQ 3.8.9 start it and create the required exchanges automatically. 
+This will use docker to pull RabbitMQ start it and create the required exchanges automatically. 
 Later on, you can start the RabbitMQ container with `docker start rabbit` 
 
 The default `settings.properties` is already set up to connect to this instance.

@@ -15,7 +15,7 @@ docker run -d \
 -e RABBITMQ_DEFAULT_USER=${RABBITMQ_USER} \
 -e RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASS} \
 -e RABBITMQ_DEFAULT_VHOST=${RABBITMQ_VHOST} \
-rabbitmq:3.8.9-management
+rabbitmq:3.13.1-management
 
 echo "Waiting for RabbitMQ server..."
 sleep 10

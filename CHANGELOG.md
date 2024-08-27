@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [8.0.0]
+
+- Durable event queues will be declared as [Quorum Queues](https://www.rabbitmq.com/docs/quorum-queues).
+- Breaking change: Please make sure you delete the old queue or use a different name when updating.
+- Updated example for value set to include the required timestamp.
+
 ## [7.2.0]
 
 - Updated included LsBL Library to 4.15.1.

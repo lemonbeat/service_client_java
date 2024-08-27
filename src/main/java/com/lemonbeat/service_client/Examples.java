@@ -13,6 +13,7 @@ import com.lemonbeat.lsdl.value.ValueSetType;
 import com.lemonbeat.lsdl.value_description.ValueDescriptionType;
 
 import javax.xml.bind.JAXBException;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -200,6 +201,7 @@ public class Examples {
         ValueSetType value_1 = new ValueSetType();
         value_1.setValueId(1L);
         value_1.setNumber(1.0);
+        value_1.setTimestamp(BigInteger.valueOf(0));
         valueList.add(value_1);
 
         valueServiceClient.setValueBySgtin(deviceSgtin, valueList, 1, valueSetResponse -> {

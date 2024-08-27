@@ -17,6 +17,8 @@ import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.charset.StandardCharsets;
 import java.security.KeyStore;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Properties;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -137,13 +139,7 @@ public class ServiceClient {
 
             final Channel channel = connection.createChannel();
             final String queueName = eventQueueName(eventName, durable);
-            String eventsQueueName;
-
-            if(durable){
-                eventsQueueName = channel.queueDeclare(queueName, true, false, false, null).getQueue();
-            } else {
-                eventsQueueName = channel.queueDeclare(queueName, false, true, true, null).getQueue();
-            }
+            String eventsQueueName = queueDeclare(channel, queueName, durable);
             // Start with a prefetch count of 1 to ensure the client is not overloaded
             // You can tune this value based on your resources: https://www.rabbitmq.com/consumer-prefetch.html
             channel.basicQos(1);
@@ -180,12 +176,7 @@ public class ServiceClient {
                 public void handleConsumeOk(String consumerTag) {
                     if(reconnection) {
                         try {
-                            String eventsQueueName;
-                            if(durable){
-                                eventsQueueName = channel.queueDeclare(queueName, true, false, false, null).getQueue();
-                            } else {
-                                eventsQueueName = channel.queueDeclare(queueName, false, true, true, null).getQueue();
-                            }
+                            String eventsQueueName = queueDeclare(channel, queueName, durable);
                             this.currentChannel.basicQos(1);
                             this.currentChannel.queueBind(eventsQueueName, ServiceClient.EVENT_EXCHANGE, eventName);
                             this.reconnection = false;
@@ -201,6 +192,16 @@ public class ServiceClient {
         } catch (IOException e) {
             e.printStackTrace();
             return null;
+        }
+    }
+
+    private String queueDeclare(Channel channel, String queueName, boolean durable) throws IOException {
+        if(durable){
+            Map<String, Object> params = new HashMap<>();
+            params.put("x-queue-type", "quorum");
+            return channel.queueDeclare(queueName, true, false, false, params).getQueue();
+        } else {
+            return channel.queueDeclare(queueName, false, true, true, null).getQueue();
         }
     }
 
